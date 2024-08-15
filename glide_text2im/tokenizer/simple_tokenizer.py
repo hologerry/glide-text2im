@@ -5,6 +5,7 @@ Copied from: https://github.com/openai/CLIP/blob/573315e83f07b53a61ff5098757e8fc
 import gzip
 import html
 import os
+
 from functools import lru_cache
 from typing import List, Tuple
 
@@ -24,21 +25,19 @@ def bytes_to_unicode():
     The reversible bpe codes work on unicode strings.
     This means you need a large # of unicode characters in your vocab if you want to avoid UNKs.
     When you're at something like a 10B token dataset you end up needing around 5K for decent coverage.
-    This is a signficant percentage of your normal, say, 32K bpe vocab.
+    This is a significant percentage of your normal, say, 32K bpe vocab.
     To avoid that, we want lookup tables between utf-8 bytes and unicode strings.
     And avoids mapping to whitespace/control characters the bpe code barfs on.
     """
     bs = (
-        list(range(ord("!"), ord("~") + 1))
-        + list(range(ord("¡"), ord("¬") + 1))
-        + list(range(ord("®"), ord("ÿ") + 1))
+        list(range(ord("!"), ord("~") + 1)) + list(range(ord("¡"), ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
     )
     cs = bs[:]
     n = 0
-    for b in range(2 ** 8):
+    for b in range(2**8):
         if b not in bs:
             bs.append(b)
-            cs.append(2 ** 8 + n)
+            cs.append(2**8 + n)
             n += 1
     cs = [chr(n) for n in cs]
     return dict(zip(bs, cs))
@@ -155,9 +154,5 @@ class SimpleTokenizer(object):
 
     def decode(self, tokens):
         text = "".join([self.decoder[token] for token in tokens])
-        text = (
-            bytearray([self.byte_decoder[c] for c in text])
-            .decode("utf-8", errors="replace")
-            .replace("</w>", " ")
-        )
+        text = bytearray([self.byte_decoder[c] for c in text]).decode("utf-8", errors="replace").replace("</w>", " ")
         return text

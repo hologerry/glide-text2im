@@ -1,11 +1,14 @@
 import os
+
 from functools import lru_cache
 from typing import Dict, Optional
 
 import requests
 import torch as th
+
 from filelock import FileLock
 from tqdm.auto import tqdm
+
 
 MODEL_PATHS = {
     "base": "https://openaipublic.blob.core.windows.net/diffusion/dec-2021/base.pt",
@@ -22,9 +25,7 @@ def default_cache_dir() -> str:
     return os.path.join(os.path.abspath(os.getcwd()), "glide_model_cache")
 
 
-def fetch_file_cached(
-    url: str, progress: bool = True, cache_dir: Optional[str] = None, chunk_size: int = 4096
-) -> str:
+def fetch_file_cached(url: str, progress: bool = True, cache_dir: Optional[str] = None, chunk_size: int = 4096) -> str:
     """
     Download the file at the given URL into a local file and return the path.
 
@@ -62,9 +63,7 @@ def load_checkpoint(
     chunk_size: int = 4096,
 ) -> Dict[str, th.Tensor]:
     if checkpoint_name not in MODEL_PATHS:
-        raise ValueError(
-            f"Unknown checkpoint name {checkpoint_name}. Known names are: {MODEL_PATHS.keys()}."
-        )
+        raise ValueError(f"Unknown checkpoint name {checkpoint_name}. Known names are: {MODEL_PATHS.keys()}.")
     path = fetch_file_cached(
         MODEL_PATHS[checkpoint_name], progress=progress, cache_dir=cache_dir, chunk_size=chunk_size
     )

@@ -63,9 +63,7 @@ class Text2ImUNet(UNetModel):
             self.transformer_proj = nn.Linear(xf_width, self.model_channels * 4)
 
             if self.xf_padding:
-                self.padding_embedding = nn.Parameter(
-                    th.empty(text_ctx, xf_width, dtype=th.float32)
-                )
+                self.padding_embedding = nn.Parameter(th.empty(text_ctx, xf_width, dtype=th.float32))
             if self.xf_ar:
                 self.unemb = nn.Linear(xf_width, self.tokenizer.n_vocab)
                 if share_unemb:
@@ -160,9 +158,7 @@ class SuperResText2ImUNet(Text2ImUNet):
 
     def forward(self, x, timesteps, low_res=None, **kwargs):
         _, _, new_height, new_width = x.shape
-        upsampled = F.interpolate(
-            low_res, (new_height, new_width), mode="bilinear", align_corners=False
-        )
+        upsampled = F.interpolate(low_res, (new_height, new_width), mode="bilinear", align_corners=False)
         x = th.cat([x, upsampled], dim=1)
         return super().forward(x, timesteps, **kwargs)
 
@@ -223,9 +219,7 @@ class SuperResInpaintText2ImUnet(Text2ImUNet):
         if inpaint_mask is None:
             inpaint_mask = th.zeros_like(x[:, :1])
         _, _, new_height, new_width = x.shape
-        upsampled = F.interpolate(
-            low_res, (new_height, new_width), mode="bilinear", align_corners=False
-        )
+        upsampled = F.interpolate(low_res, (new_height, new_width), mode="bilinear", align_corners=False)
         return super().forward(
             th.cat([x, inpaint_image * inpaint_mask, inpaint_mask, upsampled], dim=1),
             timesteps,

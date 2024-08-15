@@ -6,6 +6,7 @@ https://github.com/openai/gpt-2/blob/master/src/encoder.py
 import gzip
 import json
 import os
+
 from functools import lru_cache
 from typing import List, Tuple
 
@@ -24,16 +25,14 @@ def bytes_to_unicode():
     And avoids mapping to whitespace/control characters the bpe code barfs on.
     """
     bs = (
-        list(range(ord("!"), ord("~") + 1))
-        + list(range(ord("¡"), ord("¬") + 1))
-        + list(range(ord("®"), ord("ÿ") + 1))
+        list(range(ord("!"), ord("~") + 1)) + list(range(ord("¡"), ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
     )
     cs = bs[:]
     n = 0
-    for b in range(2 ** 8):
+    for b in range(2**8):
         if b not in bs:
             bs.append(b)
-            cs.append(2 ** 8 + n)
+            cs.append(2**8 + n)
             n += 1
     cs = [chr(n) for n in cs]
     return dict(zip(bs, cs))
@@ -62,9 +61,7 @@ class Encoder:
         self.cache = {}
 
         # Should haved added re.IGNORECASE so BPE merges can happen for capitalized versions of contractions
-        self.pat = re.compile(
-            r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-        )
+        self.pat = re.compile(r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
     @property
     def n_vocab(self) -> int:
@@ -74,9 +71,7 @@ class Encoder:
     def end_token(self) -> int:
         return self.n_vocab - 1
 
-    def padded_tokens_and_mask(
-        self, tokens: List[int], text_ctx: int
-    ) -> Tuple[List[int], List[bool]]:
+    def padded_tokens_and_mask(self, tokens: List[int], text_ctx: int) -> Tuple[List[int], List[bool]]:
         tokens = tokens[:text_ctx]
         padding = text_ctx - len(tokens)
         padded_tokens = tokens + [self.end_token] * padding
@@ -145,7 +140,4 @@ def get_encoder():
     with gzip.open(os.path.join(root_dir, "vocab.bpe.gz"), "r") as f:
         bpe_data = str(f.read(), "utf-8")
     bpe_merges = [tuple(merge_str.split()) for merge_str in bpe_data.split("\n")[1:-1]]
-    return Encoder(
-        encoder=encoder,
-        bpe_merges=bpe_merges,
-    )
+    return Encoder(encoder=encoder, bpe_merges=bpe_merges)

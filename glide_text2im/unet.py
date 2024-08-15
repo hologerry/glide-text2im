@@ -1,4 +1,5 @@
 import math
+
 from abc import abstractmethod
 
 import torch as th
@@ -6,7 +7,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .fp16_util import convert_module_to_f16, convert_module_to_f32
-from .nn import avg_pool_nd, conv_nd, linear, normalization, timestep_embedding, zero_module
+from .nn import (
+    avg_pool_nd,
+    conv_nd,
+    linear,
+    normalization,
+    timestep_embedding,
+    zero_module,
+)
 
 
 class TimestepBlock(nn.Module):
@@ -275,9 +283,7 @@ class QKVAttention(nn.Module):
             k = th.cat([ek, k], dim=-1)
             v = th.cat([ev, v], dim=-1)
         scale = 1 / math.sqrt(math.sqrt(ch))
-        weight = th.einsum(
-            "bct,bcs->bts", q * scale, k * scale
-        )  # More stable with f16 than dividing afterwards
+        weight = th.einsum("bct,bcs->bts", q * scale, k * scale)  # More stable with f16 than dividing afterwards
         weight = th.softmax(weight.float(), dim=-1).type(weight.dtype)
         a = th.einsum("bts,bcs->bct", weight, v)
         return a.reshape(bs, -1, length)
@@ -364,9 +370,7 @@ class UNetModel(nn.Module):
             self.label_emb = nn.Embedding(num_classes, time_embed_dim)
 
         ch = input_ch = int(channel_mult[0] * model_channels)
-        self.input_blocks = nn.ModuleList(
-            [TimestepEmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))]
-        )
+        self.input_blocks = nn.ModuleList([TimestepEmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))])
         self._feature_size = ch
         input_block_chans = [ch]
         ds = 1
@@ -547,6 +551,7 @@ class UNetModel(nn.Module):
         h = h.type(x.dtype)
         return self.out(h)
 
+
 class SuperResUNetModel(UNetModel):
     """
     A UNetModel that performs super-resolution.
@@ -570,7 +575,7 @@ class SuperResUNetModel(UNetModel):
         x = th.cat([x, upsampled], dim=1)
         return super().forward(x, timesteps, **kwargs)
 
-    
+
 class InpaintUNetModel(UNetModel):
     """
     A UNetModel which can perform inpainting.

@@ -1,4 +1,5 @@
 import math
+
 from abc import ABC, abstractmethod
 from itertools import product
 from typing import Any, Optional
@@ -30,12 +31,8 @@ class AttentionMask(ABC):
 
         self.n_query_block = self.query_context_size // self.block_size
         self.n_key_block = self.key_context_size // self.block_size
-        self.first_pad_query_block_idx = self.n_query_block - int(
-            math.ceil(self.n_query_pad / self.block_size)
-        )
-        self.first_pad_key_block_idx = self.n_key_block - int(
-            math.ceil(self.n_key_pad / self.block_size)
-        )
+        self.first_pad_query_block_idx = self.n_query_block - int(math.ceil(self.n_query_pad / self.block_size))
+        self.first_pad_key_block_idx = self.n_key_block - int(math.ceil(self.n_key_pad / self.block_size))
 
     def _make_global_layout(self) -> None:
         if not self.is_head_specific:
@@ -54,14 +51,10 @@ class AttentionMask(ABC):
         self.global_layout = m
 
     @abstractmethod
-    def _block_layout(
-        self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int
-    ) -> np.ndarray:
+    def _block_layout(self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int) -> np.ndarray:
         raise NotImplementedError()
 
-    def block_layout(
-        self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int
-    ) -> np.ndarray:
+    def block_layout(self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int) -> np.ndarray:
         """
         `query_idx`, `key_idx` are block-level, zero-based indices.
         """
@@ -97,9 +90,7 @@ class DenseAttentionMask(AttentionMask):
         self.global_layout[self.n_query_block - n_zero_query_blocks :] = False
         self.global_layout[:, self.n_key_block - n_zero_key_blocks :] = False
 
-    def _block_layout(
-        self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int
-    ) -> np.ndarray:
+    def _block_layout(self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int) -> np.ndarray:
         return np.ones([self.block_size, self.block_size], dtype=np.bool)
 
 
@@ -114,9 +105,7 @@ class DenseCausalAttentionMask(AttentionMask):
         self.global_layout[self.n_query_block - n_zero_query_blocks :] = False
         self.global_layout[:, self.n_key_block - n_zero_key_blocks :] = False
 
-    def _block_layout(
-        self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int
-    ) -> np.ndarray:
+    def _block_layout(self, blk_shape: Any, head_idx: int, query_idx: int, key_idx: int, blk_idx: int) -> np.ndarray:
         if query_idx > key_idx:
             return np.ones(2 * [self.block_size], dtype=np.bool)
         elif query_idx < key_idx:

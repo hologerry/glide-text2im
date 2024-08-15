@@ -1,4 +1,5 @@
 import math
+
 from collections import OrderedDict
 from typing import List, Optional, Tuple, cast
 
@@ -16,6 +17,7 @@ from .attention import (
     to_attention_info,
 )
 from .utils import Affine, LayerNorm, zero_key_bias_grad
+
 
 # Constants used in the original CLIP implementation.
 image_channel_means = [122.77093945, 116.74601272, 104.09373519]
@@ -64,12 +66,8 @@ class ImageEmbedding(nn.Module):
             raise ValueError()
 
         n_patch = self.image_size // self.patch_size
-        patch_proj = torch.empty(
-            (self.n_state, 3) + 2 * (self.patch_size,), dtype=torch.float32, device=self.device
-        )
-        w_pos = torch.empty(
-            (1 + n_patch ** 2, self.n_state), dtype=torch.float32, device=self.device
-        )
+        patch_proj = torch.empty((self.n_state, 3) + 2 * (self.patch_size,), dtype=torch.float32, device=self.device)
+        w_pos = torch.empty((1 + n_patch**2, self.n_state), dtype=torch.float32, device=self.device)
 
         with torch.no_grad():
             if self.n_timestep == 0:
@@ -77,24 +75,22 @@ class ImageEmbedding(nn.Module):
                 pred_state.normal_(std=1 / np.sqrt(self.n_state))
                 self.pred_state = nn.Parameter(pred_state)
             else:
-                w_t = torch.empty(
-                    (self.n_timestep, self.n_state), dtype=torch.float32, device=self.device
-                )
+                w_t = torch.empty((self.n_timestep, self.n_state), dtype=torch.float32, device=self.device)
                 w_t.normal_(std=1 / np.sqrt(self.n_state))
                 self.w_t = nn.Parameter(w_t)
 
-            patch_proj.normal_(std=np.sqrt(2 / (self.n_state * self.patch_size ** 2)))
+            patch_proj.normal_(std=np.sqrt(2 / (self.n_state * self.patch_size**2)))
             w_pos.normal_(std=1 / np.sqrt(self.n_state))
 
         self.patch_proj = nn.Parameter(patch_proj)
         self.w_pos = nn.Parameter(w_pos)
 
-        self.channel_means = torch.tensor(
-            image_channel_means, dtype=torch.float32, device=self.device
-        )[None, :, None, None]
-        self.channel_stds = torch.tensor(
-            image_channel_stds, dtype=torch.float32, device=self.device
-        )[None, :, None, None]
+        self.channel_means = torch.tensor(image_channel_means, dtype=torch.float32, device=self.device)[
+            None, :, None, None
+        ]
+        self.channel_stds = torch.tensor(image_channel_stds, dtype=torch.float32, device=self.device)[
+            None, :, None, None
+        ]
         self.ln = LayerNorm(self.n_state, eps=1e-5, device=self.device)
 
     def forward(self, x: torch.Tensor, t: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -116,9 +112,7 @@ class ImageEmbedding(nn.Module):
 
         x = (x - self.channel_means) / self.channel_stds
         x = F.conv2d(x, self.patch_proj, stride=self.patch_size)
-        x = x.reshape(x.shape[0], self.n_state, (self.image_size // self.patch_size) ** 2).permute(
-            0, 2, 1
-        )
+        x = x.reshape(x.shape[0], self.n_state, (self.image_size // self.patch_size) ** 2).permute(0, 2, 1)
 
         sot = (
             self.pred_state[None, None].expand(x.shape[0], -1, -1)
@@ -171,7 +165,7 @@ class AttentionResblock(nn.Module):
             self.n_state,
             self.n_state,
             use_bias=True,
-            std=1 / np.sqrt(self.n_state * self.n_resblocks ** 2),
+            std=1 / np.sqrt(self.n_state * self.n_resblocks**2),
             device=self.device,
         )  # XXX
 
@@ -196,9 +190,7 @@ class AttentionResblock(nn.Module):
         q = q.view([q.shape[0], -1, self.attn_fn.n_heads, self.n_head_state]).permute((0, 2, 1, 3))
         k = k.view([k.shape[0], -1, self.attn_fn.n_heads, self.n_head_state]).permute((0, 2, 1, 3))
         v = v.view([v.shape[0], -1, self.attn_fn.n_heads, self.n_head_state]).permute((0, 2, 1, 3))
-        w = torch.einsum(
-            "bhcd,bhkd->bhck", q * math.sqrt(self.qk_scale), k * math.sqrt(self.qk_scale)
-        )
+        w = torch.einsum("bhcd,bhkd->bhck", q * math.sqrt(self.qk_scale), k * math.sqrt(self.qk_scale))
 
         if hasattr(self.attn_fn, "pytorch_attn_bias"):
             bias = self.attn_fn.pytorch_attn_bias
@@ -248,7 +240,7 @@ class FullyConnectedResblock(nn.Module):
             4 * self.n_state,
             self.n_state,
             use_bias=True,
-            std=1 / np.sqrt(self.n_state * self.n_resblocks ** 2),
+            std=1 / np.sqrt(self.n_state * self.n_resblocks**2),
             device=self.device,
         )  # XXX
 
@@ -294,9 +286,7 @@ class TextFeatureExtractor(nn.Module):
         self.ln = LayerNorm(self.n_state, eps=1e-5, device=self.device)
         self.f = Affine(self.n_state, self.n_embd, use_bias=False, device=self.device)
 
-    def forward(
-        self, text: torch.Tensor, text_len: torch.Tensor, return_probe_features: bool = False
-    ) -> torch.Tensor:
+    def forward(self, text: torch.Tensor, text_len: torch.Tensor, return_probe_features: bool = False) -> torch.Tensor:
         if len(text.shape) != 3:
             raise ValueError("expected text to be 3d")
         if len(text_len.shape) != 1:
@@ -372,9 +362,7 @@ class TextEncoder(nn.Module):
         blocks: List[Tuple[str, nn.Module]] = [
             (
                 "input",
-                TextEmbedding(
-                    self.n_bpe_vocab, self.max_text_len, self.n_state, device=self.device
-                ),
+                TextEmbedding(self.n_bpe_vocab, self.max_text_len, self.n_state, device=self.device),
             )
         ]
 
@@ -386,9 +374,7 @@ class TextEncoder(nn.Module):
                 )
             )
 
-        blocks.append(
-            ("output", TextFeatureExtractor(self.n_state, self.n_embd, device=self.device))
-        )
+        blocks.append(("output", TextFeatureExtractor(self.n_state, self.n_embd, device=self.device)))
 
         self.blocks = nn.ModuleDict(OrderedDict(blocks))
 

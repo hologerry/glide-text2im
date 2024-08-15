@@ -1,4 +1,5 @@
 import os
+
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -7,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import yaml
+
 from glide_text2im.tokenizer.simple_tokenizer import SimpleTokenizer
 
 from .encoders import ImageEncoder, TextEncoder
